@@ -1,3 +1,47 @@
+Version: 3.0.0
+------------
+ - Migrate underlying library to @st-one-io/node-s7
+ - Remove optional dependency on mpi-s7 (project is now split into this and `node-red-contrib-mpi-s7`)
+ - Added tag validation on the editor
+
+Version: 2.2.1
+------------
+ - Fixes and improve PLC discovery UI
+
+Version: 2.2.0
+------------
+ - Adds support to `DT`, `DTZ`, `DTL` and `DTLZ` data types
+
+Version: 2.1.1
+------------
+ - Updates dependency of nodes7 - fixes sequence collision bug
+
+Version: 2.1.0
+------------
+ - Adds support for Node-RED 1.0 API
+ - Changes node's category to "plc"
+ - Implements discovery of ethernet PLCs
+
+Version: 2.0.2
+------------
+ - Fixes #49 - fixes regression introduced in 2.0.1 that prevented writing to array of vars
+
+Version: 2.0.1
+------------
+ - Fixes #48 - prevents exception being thrown when writing to unknown variables
+
+Version: 2.0.0
+------------
+ - Adds support for MPI-USB adapters as transport for connecting to PLCs
+
+Version: 1.6.3
+------------
+ - l10n - Fix translation code for German
+
+Version: 1.6.2
+------------
+ - l10n - Add translations to German
+
 Version: 1.6.1
 ------------
  - Bumps dependency of nodes7

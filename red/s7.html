@@ -1,17 +1,6 @@
 <!--
- Copyright 2016-2017 Smart-Tech Controle e Automação
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
+  Copyright: (c) 2016-2020, ST-One Ltda., Guilherme Francescon Cittolin <guilherme@st-one.io>
+  GNU General Public License v3.0+ (see LICENSE or https://www.gnu.org/licenses/gpl-3.0.txt)
 -->
 
 <script type="text/x-red" data-template-name="s7 endpoint">
@@ -21,31 +10,53 @@
 	<div id="node-config-s7-endpoint-tabs-content" style="min-height: 170px;">
 		<div id="s7-endpoint-tab-connection" style="display:none">
 			<div class="form-row">
-				<label for="node-config-input-address"><i class="fa fa-globe"></i> <span data-i18n="s7.endpoint.label.address"></span></label>
-				<input class="input-append-left" type="text" id="node-config-input-address" data-i18n="[placeholder]s7.endpoint.label.address" style="width: 40%;">
-				<label for="node-config-input-port" style="margin-left: 10px; width: 35px; "> <span data-i18n="s7.endpoint.label.port"></span></label>
-				<input type="text" id="node-config-input-port" data-i18n="[placeholder]s7.endpoint.label.port" style="width: 50px">
+				<label for="node-config-input-transport"><i class="fa fa-plug"></i> <span data-i18n="s7.endpoint.label.transport"></span></label>
+				<select type="text" id="node-config-input-transport">
+					<option value="iso-on-tcp" data-i18n="s7.endpoint.transport.iso-on-tcp"></option>
+					<option value="mpi-s7" data-i18n="s7.endpoint.transport.mpi-s7"></option>
+				</select>
 			</div>
-            <div class="form-row">
-                <label for="node-config-input-connmode"><i class="fa fa-sliders"></i> <span data-i18n="s7.endpoint.label.connmode"></span></label>
-                <select type="text" id="node-config-input-connmode">
-                    <option value="rack-slot" data-i18n="s7.endpoint.connmode.rack-slot"></option>
-                    <option value="tsap" data-i18n="s7.endpoint.connmode.tsap"></option>
-                </select>
-            </div>
-			<div class="form-row" id="node-config-s7-endpoint-mode-rackslot">
-				<label for="node-config-input-rack"><i class="fa fa-sitemap"></i> <span data-i18n="s7.endpoint.label.rack"></span></label>
-				<input class="input-append-left" type="text" id="node-config-input-rack" data-i18n="[placeholder]s7.endpoint.label.rack" style="width: 50px">
-				<label for="node-config-input-slot" style="margin-left: 10px; width: 35px; "> <span data-i18n="s7.endpoint.label.slot"></span></label>
-				<input type="text" id="node-config-input-slot" data-i18n="[placeholder]s7.endpoint.label.slot" style="width:50px">
+			<div id="s7-endpoint-transport-iso-on-tcp" style="display:none; padding-left: 20px;">
+				<div class="form-row">
+					<label for="node-config-input-address"><i class="fa fa-globe"></i> <span data-i18n="s7.endpoint.label.address"></span></label>
+					<input class="input-append-left" type="text" id="node-config-input-address" data-i18n="[placeholder]s7.endpoint.placeholder.address" style="width: 40%;">
+					<label for="node-config-input-port" style="margin-left: 10px; width: auto; "> <span data-i18n="s7.endpoint.label.port"></span></label>
+					<input type="text" id="node-config-input-port" data-i18n="[placeholder]s7.endpoint.label.port" style="width: 50px; margin-right: 10px;">
+					<a id="node-config-lookup-plc-pn" class="btn red-ui-button disabled" data-i18n="[title]s7.endpoint.label.search"><i class="fa fa-search"></i></a>
+					<a id="node-config-flash-plc-pn" class="btn red-ui-button disabled" data-i18n="[title]s7.endpoint.label.flash-led"><i class="fa fa-lightbulb-o"></i></a>
+				</div>
+				<div class="form-row">
+					<label for="node-config-input-connmode"><i class="fa fa-sliders"></i> <span data-i18n="s7.endpoint.label.connmode"></span></label>
+					<select type="text" id="node-config-input-connmode">
+						<option value="rack-slot" data-i18n="s7.endpoint.connmode.rack-slot"></option>
+						<option value="tsap" data-i18n="s7.endpoint.connmode.tsap"></option>
+					</select>
+				</div>
+				<div class="form-row" id="node-config-s7-endpoint-mode-rackslot">
+					<label for="node-config-input-rack"><i class="fa fa-sitemap"></i> <span data-i18n="s7.endpoint.label.rack"></span></label>
+					<input class="input-append-left" type="text" id="node-config-input-rack" data-i18n="[placeholder]s7.endpoint.label.rack" style="width: 50px">
+					<label for="node-config-input-slot" style="margin-left: 10px; width: 35px; "> <span data-i18n="s7.endpoint.label.slot"></span></label>
+					<input type="text" id="node-config-input-slot" data-i18n="[placeholder]s7.endpoint.label.slot" style="width:50px">
+				</div>
+				<div class="form-row" id="node-config-s7-endpoint-mode-tsap">
+					<label for="node-config-input-localtsaphi"><i class="fa fa-exchange"></i> <span data-i18n="s7.endpoint.label.tsap-local"></span></label>
+					<input class="input-append-left" type="text" id="node-config-input-localtsaphi" style="width: 35px"><span><b>.</b></span>
+					<input class="input-append-left" type="text" id="node-config-input-localtsaplo" style="width: 35px">
+					<label for="node-config-input-remotetsaphi" style="margin-left: 10px"> <span data-i18n="s7.endpoint.label.tsap-remote"></span></label>
+					<input class="input-append-left" type="text" id="node-config-input-remotetsaphi" style="width: 35px"><span><b>.</b></span>
+					<input class="input-append-left" type="text" id="node-config-input-remotetsaplo" style="width: 35px">
+				</div>
 			</div>
-			<div class="form-row" id="node-config-s7-endpoint-mode-tsap">
-				<label for="node-config-input-localtsaphi"><i class="fa fa-exchange"></i> <span data-i18n="s7.endpoint.label.tsap-local"></span></label>
-				<input class="input-append-left" type="text" id="node-config-input-localtsaphi" style="width: 35px"><span><b>.</b></span>
-				<input class="input-append-left" type="text" id="node-config-input-localtsaplo" style="width: 35px">
-				<label for="node-config-input-remotetsaphi" style="margin-left: 10px"> <span data-i18n="s7.endpoint.label.tsap-remote"></span></label>
-				<input class="input-append-left" type="text" id="node-config-input-remotetsaphi" style="width: 35px"><span><b>.</b></span>
-				<input class="input-append-left" type="text" id="node-config-input-remotetsaplo" style="width: 35px">
+			<div id="s7-endpoint-transport-mpi-s7" style="display:none; padding-left: 20px;">
+				<div class="form-row">
+					<label for="node-config-input-adapter"><i class="fa fa-exchange"></i> <span data-i18n="s7.endpoint.label.adapter"></span></label>
+					<input type="text" id="node-config-input-adapter" data-i18n="[placeholder]s7.endpoint.label.adapter">
+					<input type="text" id="s7-endpoint-adapter-placeholder" data-i18n="[placeholder]s7.endpoint.label.adapterplaceholder" disabled style="display:none">
+				</div>
+				<div class="form-row">
+					<label for="node-config-input-busaddr"><i class="fa fa-sitemap"></i> <span data-i18n="s7.endpoint.label.busaddr"></span></label>
+					<input type="text" id="node-config-input-busaddr" style="width: 60px;">
+				</div>
 			</div>
 			<div class="form-row">
 				<label for="node-config-input-cycletime"><i class="fa fa-refresh"></i> <span data-i18n="s7.endpoint.label.cycletime"></span></label>
@@ -54,14 +65,6 @@
 			<div class="form-row">
 				<label for="node-config-input-timeout"><i class="fa fa-clock-o"></i> <span data-i18n="s7.endpoint.label.timeout"></span></label>
 				<input type="text" id="node-config-input-timeout" data-i18n="[placeholder]s7.endpoint.label.timeout" style="width: 60px;"> <span>ms</span>
-			</div>
-            <div class="form-row">
-				<label for="node-config-input-verbose"><i class="fa fa-comment"></i> <span data-i18n="s7.endpoint.label.verbose"></span></label>
-				<select type="text" id="node-config-input-verbose">
-					<option value="default" data-i18n="s7.endpoint.verbose.default"></option>
-					<option value="on" data-i18n="s7.endpoint.verbose.on"></option>
-					<option value="off" data-i18n="s7.endpoint.verbose.off"></option>                 
-				</select>
 			</div>
 			<div class="form-row">
 				<label for="node-config-input-name"><i class="fa fa-tag"></i> <span data-i18n="s7.label.name"></span></label>
@@ -84,21 +87,15 @@
 				<a href="#" class="editor-button editor-button-small" id="node-config-input-add-variable" style="margin: 4px;"><i class="fa fa-plus"></i> <span data-i18n="s7.endpoint.label.variables.add"></span></a>
 				<a href="#" class="editor-button editor-button-small" id="node-config-s7-endpoint-var-clean" style="margin: 4px;"><i class="fa fa-trash-o"></i> <span data-i18n="s7.endpoint.label.variables.clean"></span></a>
 			</div>
-			<!--<input type="hidden" id="node-config-input-vartable">-->
 		</div>
 	</div>
 </script>
 
 <script type="text/x-red" data-help-name="s7 endpoint">
 	<p>Configures the connection to a PLC</p>
+	<p>This node was created as part of the <a href="https://st-one.io" target="_blank">ST-One</a> project</p>
 
 	<h3>Details</h3>
-	<p>
-		The <b>Mode</b> option selects between <i>Rack/Slot</i> and <i>TSAP</i>
-		connection modes. Usually the <i>Rack/Slot</i> mode is used, except when
-		connecting to Logo devices where the only option is the <i>TSAP</i>
-		method
-	</p>
 	<p>
 		The <b>Cycle time</b> configuration specifies the time interval in which
 		all variables will be read from the PLC. A value of <code>0</code> disables
@@ -115,6 +112,35 @@
 		to "On" of "Off". By default, the behavior is controlled by the <code>-v</code>
 		command-line parameter when running Node-RED
 	</p>
+	<p>
+		In the <b>Transport</b> option it is possible to select method used
+		to reach the PLC. Different connection options are available depending
+		on the selected option:
+	</p>
+	<h4><i>Ethernet (ISO-on-TCP)</i></h4>
+	<p>
+		Connects to the specified ethernet address and port number of the PLC.
+	</p>
+	<ul>
+		<li>
+			<b>Mode</b>: selects between <i>Rack/Slot</i> and <i>TSAP</i>
+			connection modes. Usually the <i>Rack/Slot</i> mode is used, except when
+			connecting to Logo devices where the only option is the <i>TSAP</i>
+			method
+		</li>
+	</ul>
+	<h4><i>MPI/PPI/DP Adapter</i></h4>
+	<p>
+		Connects to the PLC using MPI/PPI/DP Adapters available on the system. Requires
+		the installation of <code>node-red-contrib-mpi-s7</code>.
+	</p>
+	<ul>
+		<li>
+			<b>Address</b>: specifies the address on the bus of the PLC 
+			that we will communicate to.
+		</li>
+	</ul>
+	
 
 	<h3>Notes on S7-1200/S7-1500</h3>
 	<p>
@@ -135,7 +161,7 @@
 	<h3>Variable addressing</h3>
 	<p>
 		The variables and their addresses configured on the <strong>S7 Endpoint</strong> 
-		follow a slightly different scheme than used on Step 7 or TIA Portal. 
+		follow a slightly different scheme than used on Step 7 or TIA Portal.
 		Here are some examples that may guide you on addressing your variables:
 	</p>
 	<style>
@@ -217,8 +243,8 @@
 				<td>Unsigned 32-bit number at byte 6 of DB 19</td>
 			</tr>
 			<tr>
-				<td><code>DB21,DR7</code> or <code>DB21,REAL7</code></td>
-				<td><code>DB19.DBD6</code></td>
+				<td><code>DB21,R7</code> or <code>DB21,REAL7</code></td>
+				<td><code>DB19.DBD7</code></td>
 				<td>Number</td>
 				<td>Floating point 32-bit number at byte 7 of DB 21</td>
 			</tr>
@@ -372,10 +398,53 @@
 				<td>Number</td>
 				<td>Floating point 32-bit number at byte 38 of memory area</td>
 			</tr>
+			<tr>
+				<td><code>DB1,DT0</code></td>
+				<td><code>-</code></td>
+				<td>Date**</td>
+				<td>A timestamp in the DATE_AND_TIME format</td>
+			</tr>
+			<tr>
+				<td><code>DB1,DTZ10</code></td>
+				<td><code>-</code></td>
+				<td>Date**</td>
+				<td>A timestamp in the DATE_AND_TIME format, in UTC</td>
+			</tr>
+			<tr>
+				<td><code>DB2,DTL2</code></td>
+				<td><code>-</code></td>
+				<td>Date**</td>
+				<td>A timestamp in the DTL format</td>
+			</tr>
+			<tr>
+				<td><code>DB1,DTLZ12</code></td>
+				<td><code>-</code></td>
+				<td>Date**</td>
+				<td>A timestamp in the DTL format, in UTC</td>
+			</tr>
+			<tr>
+				<td><code>DB57,RWORD4</code></td>
+				<td><code>DB57.DBW4</code></td>
+				<td>Number</td>
+				<td>Unsigned 16-bit number at byte 4 of DB 57, interpreted as Little-Endian</td>
+			</tr>
+			<tr>
+				<td><code>DB13,RDI5</code> or <code>DB13,RDINT5</code></td>
+				<td><code>DB13.DBD5</code></td>
+				<td>Number</td>
+				<td>Signed 32-bit number at byte 5 of DB 13, interpreted as Little-Endian</td>
+			</tr>
+			<tr>
+				<td><code>MRW20</code></td>
+				<td><code>MRW20</code></td>
+				<td>Number</td>
+				<td>Unsigned 16-bit number at byte 20 of memory area, interpreted as Little-Endian</td>
+			</tr>
 		</tbody>
 	</table>
 
 	<p>*) Note that strings on the PLC uses 2 extra bytes at start for size/length of the string</p>
+	<p>**) Note that javascript's <code>Date</code> are <i>always</i> represented in UTC. Please use other nodes like <a href="https://flows.nodered.org/node/node-red-contrib-moment" target="_blank">node-red-contrib-moment</a> to properly handle type conversions</p>
 </script>
 
 <script type="text/javascript">
@@ -385,43 +454,81 @@
 
 <script type="text/javascript">
 
-	function validateS7Address(addr) {
-		var isBitAddr, isStrAddr, isArray, c, i;
-		addr = addr.split(',');
-		if (addr.length > 2) return "MULTCOMMA";
-		if (addr.length > 1) {
-			// test DB part
-			if (!(/^DB\d+/.test(addr[0]))) return "DB";
-			addr = addr[1].split('.');
-			if (!(/^(S|STRING|DI|DINT|I|INT|DW|DWORD|R|REAL|WORD|TIMER|COUNTER|B|BYTE|C|CHAR|X)\d+$/.test(addr[0]))) return "MEMAREADB";
-			isBitAddr = /^X\d+$/.test(addr[0]);
-			isStrAddr = /^(S|STRING)\d+$/.test(addr[0]);
+	function validateS7Address(address) {
+
+		if (!address) return 'ERR_PARSE_EMPTY';
+
+		var NODES7_REGEX_ADDR = /^(?:DB(\d+),)?([A-Z]+)(\d+)(?:\.(\d+))?(?:\.(\d+))?$/;
+		var NODES7_ADDRTYPE = ["E", "I", "A", "Q", "P", "M", "T", "C"];
+		var NODES7_DATATYPE = ["X", "B", "C", "I", "DI", "W", "D", "DW", "R", "RI", "RDI", "RW", "RD", "RDW", "RR"];
+		var NODES7_DATATYPE_DB = ["X", "BYTE", "CHAR", "STRING", "INT", "DINT", "WORD", "DWORD", "REAL", "RINT", "RDINT", "RWORD", "RDWORD", "RREAL", "DT", "DTZ", "DTL", "DTLZ", "B", "C", "S", "I", "DI", "W", "D", "DW", "R", "RI", "RDI", "RW", "RD", "RDW", "RR"];
+
+		var match = address.match(NODES7_REGEX_ADDR);
+		if (!match) return 'ERR_PARSE_UNKNOWN_FORMAT';
+
+		var match_db = match[1];
+		var match_area = match[2];
+		var match_addr = match[3];
+		var match_bitAddr = parseInt(match[4]);
+		var match_arrLen = parseInt(match[5]);
+
+		var addrType, dataType, addressOffset, dbNumber;
+
+		addressOffset = parseInt(match_addr)
+		if (isNaN(addressOffset)) return 'ERR_PARSE_ADDR_OFFSET';
+
+		if (match_db) {
+			dbNumber = parseInt(match_db);
+			if (dbNumber < 1 || isNaN(dbNumber)) return 'ERR_PARSE_DB_NUMBER';
+		}
+
+		if (dbNumber) {
+			if (!NODES7_DATATYPE_DB.includes(match_area)) return 'ERR_PARSE_DB_DATATYPE';
+			dataType = match_area;
 		} else {
-			addr = addr.split('.');
-			if (!(/^(PIB|PEB|PQB|PAB|PIC|PEC|PQC|PAC|PIW|PEW|PQW|PAW|PII|PEI|PQI|PAI|PID|PED|PQD|PAD|PIDI|PEDI|PQDI|PADI|PIR|PER|PQR|PAR|IB|EB|IC|EC|IW|EW|II|EI|ID|ED|IDI|EDI|IR|ER|QB|AB|QC|AC|QW|AW|QI|AI|QD|AD|QDI|ADI|QR|AR|MB|MC|MW|MI|MD|MDI|MR|T|C|I|E|Q|A|M)\d+$/
-				.test(addr[0]))) return "MEMAREA";
-			isBitAddr = /^(I|E|Q|A|M)\d+$/.test(addr[0]);
+			// the first char indicates the PLC area (I, Q, M, P, ...)
+			addrType = match_area.charAt(0);
+			// the data type (if area is P, skip the first char (I,E,Q,A))
+			dataType = match_area.substr(addrType === "P" ? 2 : 1);
+
+			// validate address type
+			if (!NODES7_ADDRTYPE.includes(addrType)) return 'ERR_PARSE_AREA';
+
+			if (dataType === "" && addrType !== "T" && addrType !== "C") {
+				dataType = "X";
+			}
+
+			// validate data type
+			if (!NODES7_DATATYPE.includes(dataType)) return 'ERR_PARSE_DATATYPE';
 		}
-		if (((isBitAddr || isStrAddr) && addr.length > 3) || addr.length > 2) return "SUBADDR";
-		isArray = ((isBitAddr || isStrAddr) && addr.length == 3) || addr.length == 2;
-		if (isBitAddr && addr.length < 2) return "NOBITADDR";
-		if (isStrAddr && addr.length < 2) return "NOSTRLEN";
-		for (i = 1; i < addr.length; i++) {
-			if (!(/^\d+$/.test(addr[i]))) return "NUMTYPE";
+
+		if (dataType === "X") {
+			// handle array lengths and bit address
+			if (isNaN(match_bitAddr)) return 'ERR_PARSE_BIT_OFFSET';
+			if (match_bitAddr > 7) return 'ERR_PARSE_BIT_OFFSET';
+
+		} else if (dataType === "STRING" || dataType === "S") {
+			// match_bitAddr is the string length for string types
+			if (isNaN(match_bitAddr) || match_bitAddr < 1) return 'ERR_PARSE_STRING_LEN';
+
+		} else {
+			// the array length should be at the bitAddr field, this is a syntax error
+			if (!isNaN(match_arrLen)) return 'ERR_PARSE_INVALID_BIT_OFFSET';
+
+			// the bitAddr field is actually the array length
+			if (!isNaN(match_bitAddr) && match_bitAddr < 1) return 'ERR_PARSE_INVALID_ARR_LEN';
 		}
-		if (isBitAddr) {
-			num = parseInt(addr[1]);
-			if (isNaN(num) || num < 0 || num > 7) return "BITADDR";
-		}
-		if (isStrAddr) {
-			num = parseInt(addr[1]);
-			if (isNaN(num) || num <= 0) return "STRLEN";
-		}
-		if (isArray) {
-			num = parseInt(addr[isBitAddr || isStrAddr ? 2 : 1]);
-			if (isNaN(num) || num <= 0) return "ARRLEN";
-		}
+
 		return null;
+	}
+
+	function validateAddressList(list) {
+		for (var i = 0; i < list.length; i++){
+			var elm = list[i];
+			if (!elm.name) return false;
+			if (validateS7Address(elm.addr)) return false;
+		}
+		return true;
 	}
 
 	function validateTSAP(num) {
@@ -436,9 +543,12 @@
 	RED.nodes.registerType('s7 endpoint', {
 		category: 'config',
 		defaults: {
+			transport: {
+				value: "iso-on-tcp"
+			},
 			address: {
 				value: "",
-				validate: RED.validators.regex(/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)
+				validate: function(v) {return this.transport == 'iso-on-tcp' ? !!v : true}
 			},
 			port: {
 				value: "102",
@@ -471,14 +581,19 @@
 			connmode: {
 				value: "rack-slot"
 			},
+			adapter: {
+				value: "",
+				type: "mpi-s7 adapter",
+				validate: function(v) {return this.transport != "mpi-s7" || !!v }
+			},
+			busaddr: {
+				value: 2
+			},
 			cycletime: {
-				value: 500
+				value: 1000
 			},
 			timeout: {
-				value: 1500
-			},
-			verbose: {
-				value: "default"
+				value: 2000
 			},
 			name: {
 				value: ""
@@ -487,17 +602,31 @@
 				value: [{
 					name: "",
 					addr: ""
-				}]
+				}],
+				validate: validateAddressList
 			}
 		},
 		label: function () {
-			return this.name || this.address + ":" + this.port + ":" + (
-				this.connmode == 'tsap' ?
-					(this.localtsaphi + "." + this.localtsaplo + "/" + this.remotetsaphi + "." + this.remotetsaplo) :
-					(this.rack + ":" + this.slot));
+			if (this.name) {
+				return this.name
+			} else if (this.transport == "iso-on-tcp") {
+				return this.address + ":" + this.port + "@" + (
+					this.connmode == 'tsap' ?
+						(this.localtsaphi + "." + this.localtsaplo + "/" + this.remotetsaphi + "." + this.remotetsaplo) :
+						(this.rack + ":" + this.slot))
+			} else if (this.transport == "mpi-s7") {
+				var adapterNode = RED.nodes.node(this.adapter);
+				if (adapterNode) {
+					return adapterNode.label() + "/" + this.busaddr;
+				}
+				return "MPI/PPI/DP @ ??/" + this.busaddr;
+			} else {
+				return "s7 endpoint";
+			}
 		},
 		oneditprepare: function () {
 			var self = this;
+			var tt = this._.bind(this);
 			var labelName = this._("s7.endpoint.label.variables.name");
 			var labelAddr = this._("s7.endpoint.label.variables.addr");
 			var labelDel = this._("s7.endpoint.label.variables.del");
@@ -505,6 +634,22 @@
 			var connTypeList = $('#node-config-input-connmode');
 			var rackSlotRow = $('#node-config-s7-endpoint-mode-rackslot');
 			var tsapRow = $('#node-config-s7-endpoint-mode-tsap');
+			
+			var transportList = $('#node-config-input-transport');
+			var transportIsoOnTCPGroup = $('#s7-endpoint-transport-iso-on-tcp');
+			var transportMpiS7Group = $('#s7-endpoint-transport-mpi-s7');
+
+			var fieldAddressIsoOnTcp = $('#node-config-input-address');
+			var fieldName = $('#node-config-input-name');
+
+			var lookupPlcPNBtn = $('#node-config-lookup-plc-pn');
+			var flashPlcPNBtn = $('#node-config-flash-plc-pn');
+
+			// put a placeholder for mpi-s7 adapter if not installed
+			if (!RED.nodes.getType('mpi-s7 adapter')){
+				$('#node-config-input-adapter').hide();
+				$('#s7-endpoint-adapter-placeholder').show();
+			}
 
 			// Prepare tabs
 			var tabs = RED.tabs.create({
@@ -527,6 +672,8 @@
 			}, 0);
 
 			function generateVariable(variable) {
+				var curTooltip;
+				var previousValue = variable.addr;
 				var container = $('<li/>', {
 					style: "background: #fff; margin:0; padding:8px 0px; border-bottom: 1px solid #ccc;"
 				});
@@ -567,11 +714,46 @@
 					container.fadeOut(150, function () {
 						$(this).remove();
 					});
+					if (curTooltip) curTooltip.close();
+				});
+
+				variableAddr.change(function () {
+					//validate address
+					var curVal = variableAddr.val();
+					var valError = validateS7Address(curVal);
+					if (valError) {
+						variableAddr.addClass('input-error')
+						var errorText = tt("s7.validation." + valError);
+						if (curTooltip) {
+							curTooltip.setContent(errorText);
+							curTooltip.open();
+						} else if (RED.popover && RED.popover.tooltip){
+							curTooltip = RED.popover.tooltip(variableAddr, errorText);
+							curTooltip.open();
+						}
+					} else {
+						variableAddr.removeClass('input-error');
+						if(curTooltip) {
+							curTooltip.close();
+							curTooltip.setContent('');
+							//hack to remove the popup, as Node-RED don't offer
+							// and "unbind" function. May break in the future
+							variableAddr.off('mouseenter mouseleave disabled');
+							curTooltip = null;
+						}
+					}
+
+					//update name if matching old one
+					if (previousValue && variableName.val() == previousValue) {
+						variableName.val(curVal);
+					}
+					previousValue = curVal;
 				});
 
 				//populate data
 				variableAddr.val(variable.addr);
 				variableName.val(variable.name);
+				variableAddr.change();
 
 				$("#node-config-input-variables-container").append(container);
 			}
@@ -604,6 +786,11 @@
 
 			$("#node-config-input-timeout").spinner({
 				min: 500
+			});
+
+			$("#node-config-input-busaddr").spinner({
+				min: 0,
+				max: 127
 			});
 
 			$("#node-config-s7-endpoint-var-clean").click(cleanVarTable);
@@ -691,15 +878,18 @@
 			}
 
 			if (self.timeout === undefined) {
-				console.log('defaults timeout to "1500"');
 				self.timeout = 1500;
 				$("#node-config-input-timeout").val(self.timeout);
 			}
 
 			if (self.verbose === undefined) {
-				console.log('defaults verbose to "default"');
 				self.verbose = 'default';
 				$("#node-config-input-verbose").val(self.verbose);
+			}
+
+			if (self.transport === undefined) {
+				self.transport = 'iso-on-tcp';
+				transportList.val(self.transport);
 			}
 
 			connTypeList.change(function () {
@@ -716,6 +906,104 @@
 			});
 			connTypeList.change();
 
+			transportList.change(function() {
+				var curVal = transportList.val();
+				if(curVal == "iso-on-tcp") {
+					transportIsoOnTCPGroup.show();
+					transportMpiS7Group.hide();
+				} else if (curVal == "mpi-s7") {
+					transportIsoOnTCPGroup.hide();
+					transportMpiS7Group.show();
+				} else {
+					transportIsoOnTCPGroup.hide();
+					transportMpiS7Group.hide();
+				}
+			});
+			transportList.change();
+
+			$.getJSON('__node-red-contrib-s7/discover/available/iso-on-tcp', function(data) {
+				if (data) {
+					lookupPlcPNBtn.removeClass('disabled');
+				}
+			});
+
+			var lookupPlcPNValue = null;
+			fieldAddressIsoOnTcp.change(function() {
+				lookupPlcPNValue = null;
+				flashPlcPNBtn.addClass('disabled');
+			})
+
+			lookupPlcPNBtn.click(function () {
+				if (lookupPlcPNBtn.hasClass('disabled')) return;
+
+				lookupPlcPNBtn.addClass('disabled');
+				var iconLookup = lookupPlcPNBtn.children('i');
+				iconLookup.removeClass('fa-search').addClass('fa-spinner fa-spin fa-fw');
+
+				$.getJSON('__node-red-contrib-s7/discover/iso-on-tcp', function (data) {
+					console.log("node-red-contrib-s7 discovered PLCs", data)
+
+					var listData = $.map(data, function(val){
+						return { label: val, value: val['IP Address']}
+					})
+
+					fieldAddressIsoOnTcp.autocomplete({
+						source: listData,
+						minLength: 0,
+						create: function (event, ui) {
+							$(this).data('ui-autocomplete')._renderItem = function (ul, elm) {
+								var item = elm.label;
+								elmHtml = '<a>'
+									+ '<small style="float: right;">' + item['Vendor Value'] + '</small>'
+									+ '<b>' + item['Station Name'] + '</b>'
+									+ '<br/>'
+									+ '<small style="float: right;">' + item['MAC Address'] + '</small>'
+									+ item['IP Address']
+									+ '</a>'
+								return $('<li style="padding: 2px">').attr("data-value", elm.value).append(elmHtml).appendTo(ul);
+							};
+						},
+						select: function (event, ui) {
+							var elm = ui.item.label
+							
+							event.preventDefault();
+							event.stopPropagation();
+							fieldAddressIsoOnTcp.val(elm['IP Address']);
+							fieldAddressIsoOnTcp.change();
+
+
+							if (!fieldName.val()){
+								fieldName.val(elm['Station Name']);
+							}
+
+							lookupPlcPNValue = elm;
+							flashPlcPNBtn.removeClass('disabled');
+						}
+					});
+					
+					fieldAddressIsoOnTcp.focus(function() {
+						fieldAddressIsoOnTcp.autocomplete("search", "")
+					});
+					fieldAddressIsoOnTcp.focus();
+				}).always(function() {
+					iconLookup.removeClass('fa-spinner fa-spin fa-fw').addClass('fa-search');
+					lookupPlcPNBtn.removeClass('disabled');
+				});
+			});
+
+			flashPlcPNBtn.click(function() {
+				if (flashPlcPNBtn.hasClass('disabled')) return;
+
+				if (!lookupPlcPNValue) {
+					flashPlcPNBtn.addClass('disabled');
+					return;
+				}
+
+				var macaddr = lookupPlcPNValue['MAC Address'].replace(/:/g, '-');
+				var tgtUrl = '__node-red-contrib-s7/flashled/iso-on-tcp/' + macaddr;
+				$.getJSON(tgtUrl);
+			});
+
 		},
 		oneditsave: function () {
 			var node = this;
@@ -724,9 +1012,11 @@
 
 			vars.each(function (i) {
 				var elm = $(this);
+				var addr = elm.find(".node-config-input-variable-addr").val();
+				var name = elm.find(".node-config-input-variable-name").val();
 				var v = {
-					addr: elm.find(".node-config-input-variable-addr").val(),
-					name: elm.find(".node-config-input-variable-name").val()
+					addr: addr,
+					name: name || addr
 				}
 				node.vartable.push(v);
 			});
@@ -768,6 +1058,7 @@
 
 <script type="text/x-red" data-help-name="s7 in">
 	<p>Reads data from a S7 PLC</p>
+	<p>This node was created as part of the <a href="https://st-one.io" target="_blank">ST-One</a> project</p>
 
 	<h3>Outputs</h3>
 	<dl class="message-properties">
@@ -814,7 +1105,7 @@
 
 <script type="text/javascript">
 	RED.nodes.registerType('s7 in', {
-		category: 'input',
+		category: 'plc',
 		defaults: {
 			endpoint: {
 				value: "",
@@ -935,6 +1226,7 @@
 
 <script type="text/x-red" data-help-name="s7 out">
 	<p>Writes to a memory area in a S7 PLC</p>
+	<p>This node was created as part of the <a href="https://st-one.io" target="_blank">ST-One</a> project</p>
 
 	<p class="form-tips">
 		<b>Caution when writing data to production PLCs!</b><br/>
@@ -944,24 +1236,37 @@
 
 	<h3>Inputs</h3>
 	<dl class="message-properties">
-		<dt>payload<span class="property-type">string | number | boolean</span></dt>
+		<dt>payload<span class="property-type">string | number | boolean | array</span></dt>
 		<dd>
 			the data to be written. It will be casted to the required data type
 			whenever possible.
 		</dd>
 		
-		<dt>variable<span class="property-type">string</span></dt>
+		<dt>variable<span class="property-type">string | array</span></dt>
 		<dd>
 			the variable to write to on the PLC, according to the variable list
 			on the PLC endpoint. This takes effect <i>only</i> if the "Variable"
 			field is left empty on the configuration.
 		</dd>
 	</dl>
+
+	<h3>Details</h3>
+	<p>
+		Writes data to the PLC on the variable specified on the node configuration
+		or on <code>msg.variable</code>.
+	</p>
+	<p>
+		It is possible to write to multiple variables at once, by setting both 
+		<code>msg.variable</code> and <code>msg.payload</code> to arrays containing 
+		the variable names and their values, respectively. Note that they may not be
+		written in the same write cycle to the PLC, depending on the amount of variables 
+		to be written.
+	</p>
 </script>
 
 <script type="text/javascript">
 	RED.nodes.registerType('s7 out', {
-		category: 'output',
+		category: 'plc',
 		defaults: {
 			endpoint: {
 				value: "",
@@ -1057,6 +1362,7 @@
 	<div class="form-row">
 		<label for="node-input-function"><i class="fa fa-sliders"></i> <span data-i18n="s7.control.label.function"></span></label>
 		<select type="text" id="node-input-function">
+			<option value=""></option>
 			<option value="cycletime" data-i18n="s7.control.function.cycletime"></option>
 			<option value="trigger" data-i18n="s7.control.function.trigger"></option>
 		</select>
@@ -1069,6 +1375,7 @@
 
 <script type="text/x-red" data-help-name="s7 control">
 	<p>Enables advanced control of the PLC and the connection</p>
+	<p>This node was created as part of the <a href="https://st-one.io" target="_blank">ST-One</a> project</p>
 	
 	<h3>Details</h3>
 	<p>The behavior of this node is changed according to the selected function. Each function
@@ -1097,7 +1404,7 @@
 
 <script type="text/javascript">
 	RED.nodes.registerType('s7 control', {
-		category: 'advanced',
+		category: 'plc',
 		defaults: {
 			endpoint: {
 				value: "",
@@ -1105,8 +1412,7 @@
 				required: true
 			},
 			function: {
-				value: "cycletime",
-				required: true
+				value: "cycletime"
 			},
 			name: {
 				value: ""

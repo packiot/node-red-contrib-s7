@@ -1,30 +1,29 @@
+//@ts-check
 /*
-   Copyright 2016-2017 Smart-Tech Controle e Automação
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+  Copyright: (c) 2016-2020, St-One Ltda., Guilherme Francescon Cittolin <guilherme@st-one.io>
+  GNU General Public License v3.0+ (see LICENSE or https://www.gnu.org/licenses/gpl-3.0.txt)
 */
+
+function nrInputShim(node, fn) {
+    node.on('input', function (msg, send, done) {
+        send = send || node.send;
+        done = done || (err => err && node.error(err, msg));
+        fn(msg, send, done);
+    });
+}
 
 /**
  * Compares values for equality, includes special handling for arrays. Fixes #33
- * @param {number|string|Array} a
- * @param {number|string|Array} b 
+ * @param {number|string|Array|Date} a
+ * @param {number|string|Array|Date} b 
  */
 function equals(a, b) {
     if (a === b) return true;
     if (a == null || b == null) return false;
-    if(Array.isArray(a) && Array.isArray(b)) {
+    if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+    if (Array.isArray(a) && Array.isArray(b)) {
         if (a.length != b.length) return false;
-        
+
         for (var i = 0; i < a.length; ++i) {
             if (a[i] !== b[i]) return false;
         }
@@ -35,12 +34,45 @@ function equals(a, b) {
 
 var MIN_CYCLE_TIME = 50;
 
+var tools = require('../src/tools.js');
+
 module.exports = function (RED) {
     "use strict";
 
-    var util = require('util');
-    var nodes7 = require('nodes7');
+    var nodes7 = require('@st-one-io/nodes7');
     var EventEmitter = require('events').EventEmitter;
+
+    // ---------- Discovery Endpoints ----------
+
+    RED.httpAdmin.get('/__node-red-contrib-s7/discover/available/iso-on-tcp', RED.auth.needsPermission('s7.discover'), function (req, res) {
+        tools.isPnToolsAvailable().then(function (available) {
+            res.json(available).end();
+        }).catch(() => {
+            res.status(500).end();
+        });
+    });
+
+    RED.httpAdmin.get('/__node-red-contrib-s7/discover/iso-on-tcp', RED.auth.needsPermission('s7.discover'), function (req, res) {
+        tools.listDevicesPN().then(function (devices) {
+            res.json(devices).end();
+        }).catch(() => {
+            res.status(500).end();
+        });
+    });
+
+    RED.httpAdmin.get('/__node-red-contrib-s7/flashled/iso-on-tcp/:mac', RED.auth.needsPermission('s7.discover'), function (req, res) {
+        let mac_addr = (req.params.mac || '').replace(/-/g, ':');
+        if (!/^([A-Fa-f0-9]{2}:){5}[A-Fa-f0-9]{2}$/.test(mac_addr)) {
+            res.status(400).end();
+            return;
+        }
+
+        tools.flashLedPN(mac_addr).then(function () {
+            res.status(204).end();
+        }).catch(() => {
+            res.status(500).end();
+        });
+    });
 
     // ---------- S7 Endpoint ----------
 
@@ -117,75 +149,90 @@ module.exports = function (RED) {
         EventEmitter.call(this);
         var node = this;
         var oldValues = {};
-        var connOpts;
         var status;
         var readInProgress = false;
         var readDeferred = 0;
-        var vars = config.vartable;
-        var isVerbose = (config.verbose == 'on' || config.verbose == 'off') ? (config.verbose == 'on') : RED.settings.get('verbose');
-        var connectTimeoutTimer;
         var connected = false;
         var currentCycleTime = config.cycletime;
-        node.writeInProgress = false;
-        node.writeQueue = [];
-
-        if (typeof vars == 'string') {
-            vars = JSON.parse(vars);
-        }
+        var transport = config.transport || 'iso-on-tcp';
 
         RED.nodes.createNode(this, config);
 
         //avoids warnings when we have a lot of S7In nodes
         this.setMaxListeners(0);
 
-        connOpts = {
-            host: config.address,
-            port: config.port
-        };
+        node.endpoint = null;
+        let connOpts;
+        let itemGroup;
+        let s7ConnOpts = { timeout: parseInt(config.timeout) }
 
-        if (config.connmode === undefined) {
-            //default for old configurations
-            config.connmode = 'rack-slot';
-        }
+        if (transport === 'mpi-s7') {
 
+            node.adapter = RED.nodes.getNode(config.adapter);
+            if (!node.adapter) {
+                return node.error(RED._("s7.error.missingconfig"));
+            }
 
-        switch (config.connmode) {
-            case "rack-slot":
-                connOpts.rack = config.rack;
-                connOpts.slot = config.slot;
-                break;
-            case "tsap":
-                if (!validateTSAP(config.localtsaphi) ||
-                    !validateTSAP(config.localtsaplo) ||
-                    !validateTSAP(config.remotetsaphi) ||
-                    !validateTSAP(config.remotetsaplo)) {
-                    node.error(RED._("s7.error.invalidtsap", config));
+            s7ConnOpts.maxJobs = 1;
+
+            connOpts = {
+                customTransport: async () => node.adapter.getStream(config.busaddr),
+                s7ConnOpts
+            }
+
+        } else if (transport === 'iso-on-tcp') {
+
+            switch (config.connmode) {
+                case "rack-slot":
+                    connOpts = {
+                        host: config.address,
+                        port: Number(config.port),
+                        rack: Number(config.rack),
+                        slot: Number(config.slot),
+                        s7ConnOpts: s7ConnOpts
+                    }
+                    break;
+                case "tsap":
+                    if (!validateTSAP(config.localtsaphi) ||
+                        !validateTSAP(config.localtsaplo) ||
+                        !validateTSAP(config.remotetsaphi) ||
+                        !validateTSAP(config.remotetsaplo)) {
+                        node.error(RED._("s7.error.invalidtsap", config));
+                        return;
+                    }
+
+                    let localTSAP = parseInt(config.localtsaphi, 16) << 8;
+                    localTSAP += parseInt(config.localtsaplo, 16);
+                    let remoteTSAP = parseInt(config.remotetsaphi, 16) << 8;
+                    remoteTSAP += parseInt(config.remotetsaplo, 16);
+
+                    connOpts = {
+                        host: config.address,
+                        port: config.port,
+                        srcTSAP: localTSAP,
+                        dstTSAP: remoteTSAP,
+                        s7ConnOpts: s7ConnOpts
+                    }
+                    break;
+                default:
+                    node.error(RED._("s7.error.invalidconntype", config));
                     return;
-                }
-
-                connOpts.localTSAP = parseInt(config.localtsaphi, 16) << 8;
-                connOpts.localTSAP += parseInt(config.localtsaplo, 16);
-                connOpts.remoteTSAP = parseInt(config.remotetsaphi, 16) << 8;
-                connOpts.remoteTSAP += parseInt(config.remotetsaplo, 16);
-                break;
-            default:
-                node.error(RED._("s7.error.invalidconntype", config));
-                return;
+            }
+        } else {
+            node.error(RED._("s7.error.invalidconntype", config));
+            return;
         }
 
-        node._vars = createTranslationTable(vars);
+        node._vars = createTranslationTable(config.vartable);
 
         node.getStatus = function getStatus() {
             return status;
         };
 
         node.writeVar = function writeVar(obj) {
-            node.writeQueue.push(obj);
-
-            if (!node.writeInProgress) {
-                writeNext();
-            }
-
+            itemGroup.writeItems(obj.name, obj.val)
+                .then(() => obj.done())
+                .catch(e => obj.done(e))
         };
 
         /**
@@ -196,11 +243,11 @@ module.exports = function (RED) {
          * @param {number} interval the cycle time interval, in ms
          * @returns {string|undefined} an string with the error if any, or undefined
          */
-        node.updateCycleTime = function updateCycleTime(interval){
+        node.updateCycleTime = function updateCycleTime(interval) {
             let time = parseInt(interval);
 
             if (isNaN(time) || time < 0) {
-                return RED._("s7.error.invalidtimeinterval", {interval: interval});
+                return RED._("s7.error.invalidtimeinterval", { interval: interval });
             }
 
             clearInterval(node._td);
@@ -209,36 +256,12 @@ module.exports = function (RED) {
             if (!time) return;
 
             if (time < MIN_CYCLE_TIME) {
-                node.warn(RED._("s7.info.cycletimetooshort", { min: MIN_CYCLE_TIME}), {});
+                node.warn(RED._("s7.info.cycletimetooshort", { min: MIN_CYCLE_TIME }), {});
                 time = MIN_CYCLE_TIME;
             }
 
             currentCycleTime = time;
             node._td = setInterval(doCycle, time);
-        }
-
-        function onWritten(err) {
-            node.writeInProgress = false;
-
-            writeNext();
-
-            if (err) {
-                manageStatus('badvalues');
-                node.error(RED._("s7.error.badvalues"), {});
-                return;
-            }
-
-            manageStatus('online');
-        }
-
-        function writeNext() {
-            if (!connected) return;
-
-            var nextElm = node.writeQueue.shift();
-            if (nextElm) {
-                node._conn.writeItems(nextElm.name, nextElm.val, onWritten);
-                node.writeInProgress = true;
-            }
         }
 
         function manageStatus(newStatus) {
@@ -250,18 +273,12 @@ module.exports = function (RED) {
             });
         }
 
-        function cycleCallback(err, values) {
+        function cycleCallback(values) {
             readInProgress = false;
 
             if (readDeferred && connected) {
                 doCycle();
                 readDeferred = 0;
-            }
-
-            if (err) {
-                manageStatus('badvalues');
-                node.error(RED._("s7.error.badvalues"), {});
-                return;
             }
 
             manageStatus('online');
@@ -284,107 +301,62 @@ module.exports = function (RED) {
 
         function doCycle() {
             if (!readInProgress && connected) {
-                node._conn.readAllItems(cycleCallback);
+                itemGroup.readAllItems().then(cycleCallback).catch(e => {
+                    node.error(e, {});
+                    readInProgress = false;
+                });
                 readInProgress = true;
             } else {
                 readDeferred++;
-
-                if (readDeferred > 10) {
-                    node.warn(RED._("s7.error.noresponse"), {});
-                    connect(); //this also drops any existing connection
-                }
             }
         }
         node.doCycle = doCycle;
 
-        function onConnect(err) {
-            var varKeys = Object.keys(node._vars);
-
-            clearTimeout(connectTimeoutTimer);
-
-            if (err) {
-                manageStatus('offline');
-                node.error(RED._("s7.error.onconnect") + err.toString(), {});
-
-                connected = false;
-
-                //try to reconnect if failed to connect
-                connectTimeoutTimer = setTimeout(connect, 5000);
-
-                return;
-            }
-
+        function onConnect() {
             readInProgress = false;
             readDeferred = 0;
             connected = true;
 
             manageStatus('online');
 
-            if (!varKeys || !varKeys.length) {
-                node.warn(RED._("s7.info.novars"), {});
-                return;
-            }
-
-            node._conn.setTranslationCB(function (tag) {
-                return node._vars[tag];
-            });
-            node._conn.addItems(varKeys);
             node.updateCycleTime(currentCycleTime);
-
-            writeNext();
         }
 
-        function closeConnection(done) {
-            //ensure we won't try to connect again if anybody wants to close it
-            clearTimeout(connectTimeoutTimer);
-
-            if (isVerbose) {
-                node.log(RED._("s7.info.disconnect"));
-            }
+        function onDisconnect() {
             manageStatus('offline');
-            clearInterval(node._td);
-
-            function doCb() {
-                node._conn = null;
-                if (typeof done == 'function') done();
-            }
             connected = false;
-
-            if (node._conn) {
-                node._conn.dropConnection(doCb);
-            } else {
-                process.nextTick(doCb);
-            }
         }
 
-        node.on('close', closeConnection);
+        node.on('close', done => {
+            manageStatus('offline');
+            if (!node.endpoint) done();
 
+            node.endpoint.disconnect().then(done).catch(e => {
+                node.error(e);
+            });
+        });
 
-        function connect() {
-            function doConnect() {
-                manageStatus('connecting');
+        manageStatus('offline');
 
-                if (isVerbose) {
-                    node.log(RED._("s7.info.connect"));
-                }
+        node.endpoint = new nodes7.S7Endpoint(connOpts);
+        node.endpoint.on('connecting', () => manageStatus('connecting'));
+        node.endpoint.on('connect', onConnect);
+        node.endpoint.on('disconnect', onDisconnect);
+        node.endpoint.on('error', (e => {
+            manageStatus('offline');
+            node.error(e && e.toString(), {});
+        }));
 
-                connected = false;
-                node._conn = new nodes7({
-                    silent: !isVerbose,
-                    debug: isVerbose
-                });
-                node._conn.globalTimeout = parseInt(config.timeout) || 1500;
-                node._conn.initiateConnection(connOpts, onConnect);
-            }
+        itemGroup = new nodes7.S7ItemGroup(node.endpoint);
+        itemGroup.setTranslationCB(k => node._vars[k]);
 
-            if (node._conn) {
-                closeConnection(doConnect);
-            } else {
-                process.nextTick(doConnect);
-            }
+        let varKeys = Object.keys(node._vars)
+        if (!varKeys || !varKeys.length) {
+            node.warn(RED._("s7.info.novars"), {});
+            return;
+        } else {
+            itemGroup.addItems(varKeys);
         }
-
-        connect();
 
     }
     RED.nodes.registerType("s7 endpoint", S7Endpoint);
@@ -403,6 +375,7 @@ module.exports = function (RED) {
 
         function sendMsg(data, key, status) {
             if (key === undefined) key = '';
+            if (data instanceof Date) data = data.getTime();
             var msg = {
                 payload: data,
                 topic: key
@@ -434,8 +407,7 @@ module.exports = function (RED) {
             node.status(generateStatus(s.status, statusVal));
         }
 
-        node.status(generateStatus("connecting", ""));
-
+        node.status(generateStatus(node.endpoint.getStatus(), statusVal));
         node.endpoint.on('__STATUS__', onEndpointStatus);
 
         if (config.diff) {
@@ -493,22 +465,44 @@ module.exports = function (RED) {
             node.status(generateStatus(s.status, statusVal));
         }
 
-        function onNewMsg(msg) {
+        function onNewMsg(msg, send, done) {
             var writeObj = {
                 name: config.variable || msg.variable,
-                val: msg.payload
+                val: msg.payload,
+                done: done
             };
 
-            if (!writeObj.name) return;
+            // Test for the case we're writing multiple vars
+            if (Array.isArray(writeObj.name)) {
+
+                if (!Array.isArray(writeObj.val) || writeObj.val.length !== writeObj.name.length) {
+                    node.error(RED._("s7.error.valmismatch"));
+                    node.status(generateStatus('badvalues', statusVal));
+                    return;
+                }
+
+                for (const elm of writeObj.name) {
+                    if (!node.endpoint._vars[elm]) {
+                        node.error(RED._("s7.error.varunknown", { var: elm }));
+                        node.status(generateStatus('badvalues', statusVal));
+                        return;
+                    }
+                }
+
+            } else if (!node.endpoint._vars[writeObj.name]) {
+                node.error(RED._("s7.error.varunknown", { var: writeObj.name }));
+                node.status(generateStatus('badvalues', statusVal));
+                return;
+            }
 
             statusVal = writeObj.val;
             node.endpoint.writeVar(writeObj);
             node.status(generateStatus(node.endpoint.getStatus(), statusVal));
         }
 
-        node.status(generateStatus("connecting", ""));
+        nrInputShim(node, onNewMsg);
 
-        node.on('input', onNewMsg);
+        node.status(generateStatus(node.endpoint.getStatus(), statusVal));
         node.endpoint.on('__STATUS__', onEndpointStatus);
 
         node.on('close', function (done) {
@@ -536,30 +530,88 @@ module.exports = function (RED) {
             node.status(generateStatus(s.status, statusVal));
         }
 
-        function onMessage(msg) {
+        function onMessage(msg, send, done) {
             var res;
-            switch (config.function) {
+            let func = config.function || msg.function;
+            switch (func) {
                 case 'cycletime':
                     res = node.endpoint.updateCycleTime(msg.payload);
                     if (res) {
-                        node.error(res, msg);
+                        done(res);
                     } else {
-                        node.send(msg);
+                        send(msg);
+                        done();
                     }
                     break;
                 case 'trigger':
                     node.endpoint.doCycle();
-                    node.send(msg);
+                    send(msg);
+                    done();
+                    break;
+
+                case 'ssl':
+                    node.endpoint.endpoint
+                        .getSSL(Number(msg && msg.payload && msg.payload.id || 0), Number(msg && msg.payload && msg.payload.index || 0)).then(res => {
+                            msg.payload = res;
+                            send(msg);
+                            done();
+                        }).catch(e => {
+                            done(e);
+                        })
+                    break;
+
+                case 'list-blocks':
+                    node.endpoint.endpoint
+                        .listAllBlocks().then(res => {
+                            msg.payload = res;
+                            send(msg);
+                            done();
+                        }).catch(e => {
+                            done(e);
+                        })
+                    break;
+
+                case 'upload-block':
+                    node.endpoint.endpoint
+                        .uploadBlock(msg && msg.payload && msg.payload.type, Number(msg && msg.payload && msg.payload.number)).then(res => {
+                            msg.payload = res;
+                            send(msg);
+                            done();
+                        }).catch(e => {
+                            done(e);
+                        })
+                    break;
+
+                case 'upload-all-blocks':
+                    node.endpoint.endpoint
+                        .uploadAllBlocks().then(res => {
+                            msg.payload = res;
+                            send(msg);
+                            done();
+                        }).catch(e => {
+                            done(e);
+                        })
+                    break;
+
+                case 'all-block-info':
+                    node.endpoint.endpoint
+                        .getAllBlockInfo().then(res => {
+                            msg.payload = res;
+                            send(msg);
+                            done();
+                        }).catch(e => {
+                            done(e);
+                        })
                     break;
 
                 default:
-                    node.error(RED._("s7.error.invalidcontrolfunction", {function: config.function}), msg);
+                    node.error(RED._("s7.error.invalidcontrolfunction", { function: config.function }), msg);
             }
         }
 
         node.status(generateStatus(node.endpoint.getStatus(), statusVal));
 
-        node.on('input', onMessage);
+        nrInputShim(node, onMessage);
         node.endpoint.on('__STATUS__', onEndpointStatus);
 
         node.on('close', function (done) {
